@@ -1,6 +1,6 @@
 Golang PJSIP(Pjproject) Swig
 
-	1.	Generate pjsua2.go pjsua2_wrap.cxx
+1. Generate pjsua2.go pjsua2_wrap.cxx
 
 ```console
 $ cd $GOPATH/src
@@ -13,6 +13,7 @@ $ swig -go -cgo -intgosize 64 $CGO_CXXFLAGS -c++ pjsua2.i
 ```
 
 2. Insert cgo compile, link flags to pjsua2.go
+* CXXFLAGS, LDFLAGS from pkgconfig/libpjproject.pc
 
 ```golang
 package pjsua2
@@ -23,7 +24,6 @@ package pjsua2
 
 #define intgo swig_intgo
 typedef void *swig_voidp;
-….
 ```
 
 3. Go build
