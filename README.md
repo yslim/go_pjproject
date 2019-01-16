@@ -1,6 +1,6 @@
-Golang PJSIP(Pjproject) Swig
+Golang PJSIP(Pjproject) using Swig
 
-1. Generate pjsua2.go pjsua2_wrap.cxx
+1. Generate pjsua2.go pjsua2_wrap.cxx using swig
 
 ```console
 $ cd $GOPATH/src
