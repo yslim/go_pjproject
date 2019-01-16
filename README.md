@@ -1,9 +1,11 @@
 Title: ReadMes  
 Author: Young Lim
 
-**Golang PJSIP(Pjproject) Swig**
+Golang PJSIP(Pjproject) Swig
 
 1. Generate pjsua2.go pjsua2\_wrap.cxx
+
+\`\`\`console
 
 $ cd $GOPATH/src
 
@@ -19,7 +21,11 @@ $ export CGO\_CXXFLAGS="-I$\{pjproject-install-dir\}/include"
 
 $ swig -go -cgo -intgosize 64 $CGO\_CXXFLAGS -c++ pjsua2.i
 
+\`\`\`
+
 2\. Insert cgo compile, link flags to pjsua2.go
+
+\`\`\`golang
 
 package pjsua2
 
@@ -33,10 +39,18 @@ package pjsua2
 
 typedef void \*swig\_voidp;
 
+....
+
+\`\`\`
+
 3\. Go build
+
+\`\`\`console
 
 $ go clean -cache
 
 $ go build -x
 
 $ go install
+
+\`\`\`
