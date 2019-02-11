@@ -18,5 +18,5 @@ func (l *SipLogWriter) Write(entry pjsua2.LogEntry) {
       msg = msg[37 : len(msg)-1]
    }
 
-   fmt.Printf("[ SIP ] %v", msg)
+   fmt.Printf("[ SIP ] %v\n", msg)
 }

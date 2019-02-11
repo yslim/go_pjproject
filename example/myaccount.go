@@ -6,12 +6,12 @@ import (
 )
 
 type MyAccount struct {
-   pjsua2.Account
+   account pjsua2.Account
    calls map[pjsua2.Call]int
 }
 
 func NewMyAccount() *MyAccount {
-   return &MyAccount{pjsua2.NewAccount(), make(map[pjsua2.Call]int)}
+   return &MyAccount{nil, make(map[pjsua2.Call]int)}
 }
 
 func (acc *MyAccount) removeCall(call pjsua2.Call) {
@@ -21,7 +21,7 @@ func (acc *MyAccount) removeCall(call pjsua2.Call) {
 func (acc *MyAccount) OnRegState(prm pjsua2.OnRegStateParam) {
    checkThread()
 
-   info := acc.GetInfo()
+   info := acc.account.GetInfo()
 
    var regiState string
    if info.GetRegIsActive() {

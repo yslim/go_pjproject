@@ -56,8 +56,10 @@ func main() {
    cred := pjsua2.NewAuthCredInfo("digest", "*", "test1", 0, "test1")
    accountConfig.GetSipConfig().GetAuthCreds().Add(cred)
 
-   sipAccount := NewMyAccount()
+   myAccount := NewMyAccount()
+   sipAccount := pjsua2.NewDirectorAccount(myAccount)
+   myAccount.account = sipAccount
    sipAccount.Create(accountConfig)
 
-   time.Sleep(2 * time.Second)
+   time.Sleep(5 * time.Second)
 }
