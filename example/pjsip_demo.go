@@ -23,10 +23,13 @@ func checkThread() {
 }
 
 func main() {
-	// Init library
+	// Create endpoint
 	epConfig := pjsua2.NewEpConfig()
 	epConfig.GetLogConfig().SetLevel(4)
 	epConfig.GetLogConfig().SetWriter(logWriter)
+	endpoint.LibCreate()
+
+	// Init library
 	endpoint.LibInit(epConfig)
 	endpoint.AudDevManager().SetNullDev()
 
