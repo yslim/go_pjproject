@@ -2,7 +2,7 @@ package main
 
 import (
    "fmt"
-   "github.com/yslim/pjproject"
+   "pjproject"
 )
 
 type MyAccount struct {
