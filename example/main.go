@@ -2,9 +2,10 @@ package main
 
 import (
    "fmt"
+   "os"
+   "os/signal"
    "pjproject"
    "sync"
-   "time"
 )
 
 var (
@@ -61,5 +62,12 @@ func main() {
    myAccount.account = sipAccount
    sipAccount.Create(accountConfig)
 
-   time.Sleep(5 * time.Second)
+   c := make(chan os.Signal, 1)
+   signal.Notify(c, os.Interrupt)
+
+   <- c
+
+   checkThread()
+   pjsua2.DeleteAccount(myAccount.account)   // Unregistration explicitly
+   endpoint.LibDestroy()   // Unregistration is performed by system if registered accounts exist
 }
