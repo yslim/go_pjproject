@@ -1,21 +1,21 @@
-package main
+package sip
 
 import (
    "fmt"
-   "pjproject"
+   pjsua2 "pjproject"
 )
 
-type MyCall struct {
-   pjsua2.Call
-   account *MyAccount
+type SipCall struct {
+   sipService *SipService
+   call       pjsua2.Call
 }
 
-func NewMyCall(acc *MyAccount, callId int) *MyCall {
-   return &MyCall{pjsua2.NewCall(acc, callId), acc}
+func NewSipCall(sipService *SipService) *SipCall {
+   return &SipCall{sipService, nil}
 }
 
-func (c *MyCall) OnCallState(prm pjsua2.OnCallStateParam) {
-   ci := c.GetInfo()
+func (sc *SipCall) OnCallState(prm pjsua2.OnCallStateParam) {
+   ci := sc.call.GetInfo()
 
    fmt.Printf("[ SipCall ] onCallState %v, aor = %v", ci.GetStateText(), ci.GetRemoteUri())
 
@@ -24,9 +24,9 @@ func (c *MyCall) OnCallState(prm pjsua2.OnCallStateParam) {
          ci.GetCallIdString(), ci.GetRemoteUri(),
          ci.GetLastReason(), ci.GetLastStatusCode())
 
-      c.account.removeCall(c)
+      sc.sipService.removeCall(ci.GetCallIdString())
 
       // Delete the call
-      pjsua2.DeleteCall(c.Call)
+      pjsua2.DeleteCall(sc.call)
    }
 }

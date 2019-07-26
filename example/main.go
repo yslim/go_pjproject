@@ -4,70 +4,36 @@ import (
    "fmt"
    "os"
    "os/signal"
-   "pjproject"
-   "sync"
+   pjsua2 "pjproject"
+   "pjproject/example/sip"
 )
-
-var (
-   mutex     sync.Mutex
-   endpoint  = pjsua2.NewEndpoint()
-   logWriter = pjsua2.NewDirectorLogWriter(new(SipLogWriter))
-)
-
-func checkThread() {
-   mutex.Lock()
-   defer mutex.Unlock()
-
-   if !endpoint.LibIsThreadRegistered() {
-      endpoint.LibRegisterThread("")
-   }
-}
 
 func main() {
-   // Create endpoint
-   epConfig := pjsua2.NewEpConfig()
-   epConfig.GetLogConfig().SetLevel(4)
-   epConfig.GetLogConfig().SetWriter(logWriter)
-   endpoint.LibCreate()
 
-   // Init library
-   endpoint.LibInit(epConfig)
-   endpoint.AudDevManager().SetNullDev()
+   sipUser := SipUser{}
+   sipService := sip.NewSipService(&sipUser)
+   sipUser.sipService = sipService
 
-   // Transport
-   transportConfig := pjsua2.NewTransportConfig()
-   transportConfig.SetPort(5060)
-   endpoint.TransportCreate(pjsua2.PJSIP_TRANSPORT_UDP, transportConfig)
-
-   // Start library
-   endpoint.LibStart()
-
-   fmt.Printf("[ SipService ] Available codecs:\n")
-   for i := 0; i < int(endpoint.CodecEnum().Size()); i++ {
-      c := endpoint.CodecEnum().Get(i)
-      fmt.Printf("\t - %s (priority: %d)\n", c.GetCodecId(), c.GetPriority())
-   }
-
-   fmt.Printf("[ SipService ] PJSUA2 STARTED ***\n")
-
-   // Add account
-   accountConfig := pjsua2.NewAccountConfig()
-   accountConfig.SetIdUri("sip:test1@pjsip.org")
-   accountConfig.GetRegConfig().SetRegistrarUri("sip:sip.pjsip.org")
-   cred := pjsua2.NewAuthCredInfo("digest", "*", "test1", 0, "test1")
-   accountConfig.GetSipConfig().GetAuthCreds().Add(cred)
-
-   myAccount := NewMyAccount()
-   sipAccount := pjsua2.NewDirectorAccount(myAccount)
-   myAccount.account = sipAccount
-   sipAccount.Create(accountConfig)
+   sipService.RegisterAccount("test1", "test1")
 
    c := make(chan os.Signal, 1)
    signal.Notify(c, os.Interrupt)
 
    <- c
+}
 
-   checkThread()
-   pjsua2.DeleteAccount(myAccount.account)   // Unregistration explicitly
-   endpoint.LibDestroy()   // Unregistration is performed by system if registered accounts exist
+type SipUser struct {
+   sipService *sip.SipService
+   callId     string
+}
+
+func (su *SipUser) OnRegState(userId string, isActive bool, code pjsua2.Pjsip_status_code) {
+   fmt.Printf("[ OnRegState ] userId=%v, isActive=%v, code=%v\n", userId, isActive, code)
+   if isActive {
+      su.callId = su.sipService.MakeCall("test1", "test1")
+   }
+}
+func (su *SipUser) OnIncomingCall(callIdString string, from string, to string) interface{} {
+   su.callId = callIdString
+   return "user"
 }
