@@ -5,8 +5,8 @@ import (
    "os"
    "os/signal"
 
-   pjsua2 "pjproject"
-   "pjproject/example/sip"
+   pjsua2 "github/yslim/go_pjproject"
+   "github/yslim/go_pjproject/example/sip"
 )
 
 func main() {

@@ -4,7 +4,7 @@ import (
    "fmt"
    "strings"
 
-   "pjproject"
+   "github/yslim/go_pjproject"
 )
 
 type LogWriter struct {
