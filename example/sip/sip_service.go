@@ -5,7 +5,7 @@ import (
    "strings"
    "sync"
 
-   pjsua2 "github/yslim/go_pjproject"
+   pjsua2 "github.com/yslim/go_pjproject"
 )
 
 type SipService struct {
