@@ -2,15 +2,16 @@ package sip
 
 import (
    "fmt"
-   "pjproject"
    "strings"
+
+   "pjproject"
 )
 
-type SipLogWriter struct {
+type LogWriter struct {
    name string
 }
 
-func (l *SipLogWriter) Write(entry pjsua2.LogEntry) {
+func (l *LogWriter) Write(entry pjsua2.LogEntry) {
    msg := entry.GetMsg()
    strings.Replace(msg, "\r", "", -1)
 

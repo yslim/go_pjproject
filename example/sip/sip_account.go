@@ -2,20 +2,21 @@ package sip
 
 import (
    "fmt"
+
    pjsua2 "pjproject"
 )
 
-type SipAccount struct {
+type Account struct {
    userId     string
    sipService *SipService
 }
 
-func NewSipAccount(userId string, sipService *SipService) *SipAccount {
-   ac := &SipAccount{userId, sipService}
+func NewAccount(userId string, sipService *SipService) *Account {
+   ac := &Account{userId, sipService}
    return ac
 }
 
-func (sa *SipAccount) OnRegState(prm pjsua2.OnRegStateParam) {
+func (sa *Account) OnRegState(prm pjsua2.OnRegStateParam) {
    sa.sipService.checkThread()
 
    account := sa.sipService.activeAccounts[sa.userId]
@@ -37,9 +38,9 @@ func (sa *SipAccount) OnRegState(prm pjsua2.OnRegStateParam) {
    sa.sipService.onRegState(info.GetUri(), info.GetRegIsActive(), prm.GetCode())
 }
 
-func (sa *SipAccount) OnIncomingCall(prm pjsua2.OnIncomingCallParam) {
+func (sa *Account) OnIncomingCall(prm pjsua2.OnIncomingCallParam) {
    account := sa.sipService.getAccount(sa.userId)
-   sipCall := NewSipCall(sa.sipService)
+   sipCall := NewCall(sa.sipService)
    call := pjsua2.NewDirectorCall(sipCall, account, prm.GetCallId())
    sipCall.call = call
    callInfo := call.GetInfo()

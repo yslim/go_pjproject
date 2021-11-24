@@ -2,19 +2,20 @@ package sip
 
 import (
    "fmt"
+
    pjsua2 "pjproject"
 )
 
-type SipCall struct {
+type Call struct {
    sipService *SipService
    call       pjsua2.Call
 }
 
-func NewSipCall(sipService *SipService) *SipCall {
-   return &SipCall{sipService, nil}
+func NewCall(sipService *SipService) *Call {
+   return &Call{sipService, nil}
 }
 
-func (sc *SipCall) OnCallState(prm pjsua2.OnCallStateParam) {
+func (sc *Call) OnCallState(prm pjsua2.OnCallStateParam) {
    ci := sc.call.GetInfo()
 
    fmt.Printf("[ SipCall ] onCallState %v, aor = %v", ci.GetStateText(), ci.GetRemoteUri())

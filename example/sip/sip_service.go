@@ -2,9 +2,10 @@ package sip
 
 import (
    "fmt"
-   pjsua2 "pjproject"
    "strings"
    "sync"
+
+   pjsua2 "pjproject"
 )
 
 type SipService struct {
@@ -16,7 +17,7 @@ type SipService struct {
 
 var (
    mutex     sync.Mutex
-   logWriter = pjsua2.NewDirectorLogWriter(new(SipLogWriter))
+   logWriter = pjsua2.NewDirectorLogWriter(new(LogWriter))
 )
 
 func NewSipService(sipUser ISipService) *SipService {
@@ -50,8 +51,8 @@ func (ss *SipService) init() {
    ss.endpoint.LibStart()
 
    fmt.Printf("[ SipService ] Available codecs:\n")
-   for i := 0; i < int(ss.endpoint.CodecEnum().Size()); i++ {
-      c := ss.endpoint.CodecEnum().Get(i)
+   for i := 0; i < int(ss.endpoint.CodecEnum2().Size()); i++ {
+      c := ss.endpoint.CodecEnum2().Get(i)
       fmt.Printf("\t - %s (priority: %d)\n", c.GetCodecId(), c.GetPriority())
    }
 
@@ -97,7 +98,7 @@ func (ss *SipService) makeCallWithAccount(account pjsua2.Account, remoteUser str
    remoteUri := ss.getRemoteURI(remoteUser)
 
    // Make outgoing call
-   sipCall := NewSipCall(ss)
+   sipCall := NewCall(ss)
    call := pjsua2.NewDirectorCall(sipCall, account)
    sipCall.call = call
    callOpParam := pjsua2.NewCallOpParam(true)
@@ -112,7 +113,7 @@ func (ss *SipService) makeCallWithAccount(account pjsua2.Account, remoteUser str
 }
 
 func (ss *SipService) createLocalAccount(user string, password string) pjsua2.Account {
-   sipAccount := pjsua2.NewDirectorAccount(NewSipAccount(user, ss))
+   sipAccount := pjsua2.NewDirectorAccount(NewAccount(user, ss))
 
    accountConfig := pjsua2.NewAccountConfig()
    accountConfig.SetIdUri("sip:test1@pjsip.org")
