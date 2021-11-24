@@ -1,4 +1,4 @@
-Golang PJSIP(Pjproject) using Swig
+Golang PJSIP(pjproject) using Swig
 
 1. Generate pjsua2.go pjsua2_wrap.cxx using swig
 
@@ -19,8 +19,8 @@ $ swig -go -cgo -intgosize 64 $CGO_CXXFLAGS -c++ pjsua2.i
 package pjsua2
 
 /*
-#cgo CXXFLAGS: -I/Data/apphome/lib/static/include -g -O2 -Wno-delete-non-virtual-dtor
-#cgo LDFLAGS: -L/Data/apphome/lib/applib -L/usr/local/opt/openssl/lib -lpjsua2-x86_64-apple-darwin17.7.0 -lstdc++ -lpjsua-x86_64-apple-darwin17.7.0 -lpjsip-ua-x86_64-apple-darwin17.7.0 -lpjsip-simple-x86_64-apple-darwin17.7.0 -lpjsip-x86_64-apple-darwin17.7.0 -lpjmedia-codec-x86_64-apple-darwin17.7.0 -lpjmedia-x86_64-apple-darwin17.7.0 -lpjmedia-videodev-x86_64-apple-darwin17.7.0 -lpjmedia-audiodev-x86_64-apple-darwin17.7.0 -lpjmedia-x86_64-apple-darwin17.7.0 -lpjnath-x86_64-apple-darwin17.7.0 -lpjlib-util-x86_64-apple-darwin17.7.0 -lsrtp-x86_64-apple-darwin17.7.0 -lresample-x86_64-apple-darwin17.7.0 -lpj-x86_64-apple-darwin17.7.0 -lssl -lcrypto -lm -lpthread -framework Foundation -framework AppKit
+#cgo CXXFLAGS: -I/Data/apphome/pjproject-2.10/include -g -O2 -DPJ_AUTOCONF=1  -O2 -DPJ_IS_BIG_ENDIAN=0 -DPJ_IS_LITTLE_ENDIAN=1
+#cgo LDFLAGS: -L/Data/apphome/pjproject-2.10/lib -L/usr/local/opt/openssl/lib -L/usr/local -lpjsua2-x86_64-apple-darwin20.6.0 -lstdc++ -lpjsua-x86_64-apple-darwin20.6.0 -lpjsip-ua-x86_64-apple-darwin20.6.0 -lpjsip-simple-x86_64-apple-darwin20.6.0 -lpjsip-x86_64-apple-darwin20.6.0 -lpjmedia-codec-x86_64-apple-darwin20.6.0 -lpjmedia-x86_64-apple-darwin20.6.0 -lpjmedia-videodev-x86_64-apple-darwin20.6.0 -lpjmedia-audiodev-x86_64-apple-darwin20.6.0 -lpjmedia-x86_64-apple-darwin20.6.0 -lpjnath-x86_64-apple-darwin20.6.0 -lpjlib-util-x86_64-apple-darwin20.6.0  -lsrtp-x86_64-apple-darwin20.6.0 -lresample-x86_64-apple-darwin20.6.0  -lpj-x86_64-apple-darwin20.6.0 -lssl -lcrypto -lvpx -lm -lpthread  -framework Foundation -framework AppKit -lgnutls
 
 #define intgo swig_intgo
 typedef void *swig_voidp;
