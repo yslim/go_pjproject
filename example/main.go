@@ -5,7 +5,7 @@ import (
     "os"
     "os/signal"
 
-    "github.com/yslim/go_pjproject/example/sip"
+    "github.com/yslim/go_pjproject/v2/example/sip"
 )
 
 func main() {
