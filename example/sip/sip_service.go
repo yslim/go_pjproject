@@ -1,174 +1,189 @@
 package sip
 
 import (
-   "fmt"
-   "strings"
-   "sync"
+    "fmt"
+    "strings"
+    "sync"
+    "time"
 
-   pjsua2 "github.com/yslim/go_pjproject"
+    pjsua2 "github.com/yslim/go_pjproject"
 )
-
-type SipService struct {
-   endpoint         pjsua2.Endpoint
-   activeAccounts   map[string]pjsua2.Account
-   activeCalls      map[string]pjsua2.Call
-   sipUser          ISipService  // application callback
-}
 
 var (
-   mutex     sync.Mutex
-   logWriter = pjsua2.NewDirectorLogWriter(new(LogWriter))
+    endpoint pjsua2.Endpoint
+    accounts map[string]*Account
+    calls    map[string]*Call
+    handlers = make(map[IUserService]bool)
+    mutex    sync.Mutex
+
+    account *Account
 )
 
-func NewSipService(sipUser ISipService) *SipService {
-   sipService := SipService{}
-   sipService.sipUser = sipUser
-   sipService.init()
-   return &sipService
+func init() {
+    initEndPoint()
 }
 
-func (ss *SipService) init() {
-   ss.endpoint = pjsua2.NewEndpoint()
-   ss.activeAccounts = make(map[string]pjsua2.Account)
-   ss.activeCalls = make(map[string]pjsua2.Call)
+func initEndPoint() {
+    endpoint = pjsua2.NewEndpoint()
+    accounts = make(map[string]*Account)
+    calls = make(map[string]*Call)
 
-   // Create endpoint
-   ss.endpoint.LibCreate()
+    // Create endpoint
+    endpoint.LibCreate()
 
-   // Init library
-   epConfig := pjsua2.NewEpConfig()
-   epConfig.GetLogConfig().SetLevel(4)
-   epConfig.GetLogConfig().SetWriter(logWriter)
-   ss.endpoint.LibInit(epConfig)
-   ss.endpoint.AudDevManager().SetNullDev()
+    // Initialize endpoint
+    epConfig := pjsua2.NewEpConfig()
+    epConfig.GetUaConfig().SetUserAgent(config.AgentName)
+    epConfig.GetUaConfig().SetMaxCalls(config.MaxCall)
 
-   // Transport
-   transportConfig := pjsua2.NewTransportConfig()
-   transportConfig.SetPort(5060)
-   ss.endpoint.TransportCreate(pjsua2.PJSIP_TRANSPORT_UDP, transportConfig)
+    epConfig.GetLogConfig().SetLevel(config.PjLogLevel)
+    if config.PjLogLevel > 0 {
+        epConfig.GetLogConfig().SetWriter(pjsua2.NewDirectorLogWriter(new(LogWriter)))
+    }
 
-   // Start library
-   ss.endpoint.LibStart()
+    endpoint.LibInit(epConfig)
+    endpoint.AudDevManager().SetNullDev()
 
-   fmt.Printf("[ SipService ] Available codecs:\n")
-   for i := 0; i < int(ss.endpoint.CodecEnum2().Size()); i++ {
-      c := ss.endpoint.CodecEnum2().Get(i)
-      fmt.Printf("\t - %s (priority: %d)\n", c.GetCodecId(), c.GetPriority())
-   }
+    transportConfig := pjsua2.NewTransportConfig()
+    transportConfig.SetPort(config.LocalPort)
 
-   fmt.Printf("[ SipService ] PJSUA2 STARTED ***\n")
+    var transport pjsua2.Pjsip_transport_type_e
+    if strings.EqualFold(config.Transport, "UDP") {
+        transport = pjsua2.PJSIP_TRANSPORT_UDP
+    } else if strings.EqualFold(config.Transport, "TLS") {
+        transport = pjsua2.PJSIP_TRANSPORT_TLS
+    } else if strings.EqualFold(config.Transport, "TCP") {
+        transport = pjsua2.PJSIP_TRANSPORT_TCP
+    } else {
+        fmt.Printf("unknown config.Transport = %s\n", config.Transport)
+    }
+
+    endpoint.TransportCreate(transport, transportConfig)
+    endpoint.LibStart()
+
+    fmt.Printf("[ sip.Service ] Available codecs:\n")
+    for i := 0; i < int(endpoint.CodecEnum2().Size()); i++ {
+        c := endpoint.CodecEnum2().Get(i)
+        fmt.Printf("\t - %s (priority: %d)\n", c.GetCodecId(), c.GetPriority())
+        if !strings.HasPrefix(c.GetCodecId(), "PCM") {
+            endpoint.CodecSetPriority(c.GetCodecId(), 0)
+        }
+    }
+
+    time.AfterFunc(1*time.Second, func() {
+        checkThread()
+        emitEvent("OnSipReady")
+    })
+
+    fmt.Printf("[ sip.Service ] PJSUA2 STARTED ***\n")
 }
 
-func (ss *SipService) RegisterAccount(user string, password string) string {
-   ss.checkThread()
-   fmt.Printf("[ SipService ] Registration start, user=%v\n", user)
-   account := ss.createLocalAccount(user, password)
-   ss.activeAccounts[user] = account
+func createLocalAccount(uid string, password string) *Account {
+    // create test account
+    accountConfig := pjsua2.NewAccountConfig()
+    accountConfig.SetIdUri("sip:test1@pjsip.org")
+    accountConfig.GetRegConfig().SetRegistrarUri("sip:sip.pjsip.org")
+    cred := pjsua2.NewAuthCredInfo("digest", "*", "test1", 0, "test1")
+    accountConfig.GetSipConfig().GetAuthCreds().Add(cred)
 
-   return user
+    account := NewAccount()
+
+    pjAccount := pjsua2.NewDirectorAccount(account)
+    pjAccount.Create(accountConfig)
+
+    account.Account = pjAccount
+
+    fmt.Printf("createLocalAccount: Account Created, URI=%s\n", account.GetInfo().GetUri())
+
+    return account
 }
 
-func (ss *SipService) Unregister(accountId string) {
-   ss.checkThread()
+func getRemoteURI(remoteUser string) string {
+    remoteUri := strings.Builder{}
 
-   account := ss.activeAccounts[accountId]
-   if account == nil {
-      return
-   }
-
-   fmt.Printf("[ SipService ] Un-Registration start, user=%v\n", accountId)
-   account.SetRegistration(false)
+    remoteUri.WriteString("sip:")
+    remoteUri.WriteString(remoteUser)
+    remoteUri.WriteString("@")
+    remoteUri.WriteString(config.ProxyAddress)
+    remoteUri.WriteString(":")
+    remoteUri.WriteString(fmt.Sprintf("%d", config.ProxyPort))
+    if !strings.EqualFold(config.Transport, "UDP") {
+        if strings.EqualFold(config.Transport, "TCP") {
+            remoteUri.WriteString(";transport=tcp")
+        } else {
+            remoteUri.WriteString(";transport=tls")
+        }
+    }
+    return remoteUri.String()
 }
 
-func (ss *SipService) MakeCall(accountId string, remoteUser string) string {
-   ss.checkThread()
-
-   account := ss.activeAccounts[accountId]
-   if account == nil {
-      fmt.Printf("[ SipService ] makeCall error : first use create_account or register_account\n")
-      return ""
-   }
-
-   return ss.makeCallWithAccount(account, remoteUser)
+func emitEvent(event string, params ...interface{}) {
+    // emit event at new thread
+    go func() {
+        for h := range handlers {
+            switch event {
+            case "OnSipReady":
+                h.OnSipReady()
+            case "OnRegState":
+                h.OnRegState(params[0].(string), params[1].(bool), params[2].(int))
+            case "OnIncomingCall":
+                h.OnIncomingCall(params[0].(string), params[1].(string), params[2].(string))
+            default:
+                fmt.Printf("emitEvent, unknown event = %s\n", event)
+            }
+        }
+    }()
 }
 
-func (ss *SipService) makeCallWithAccount(account pjsua2.Account, remoteUser string) string {
-   ss.checkThread()
-
-   remoteUri := ss.getRemoteURI(remoteUser)
-
-   // Make outgoing call
-   sipCall := NewCall(ss)
-   call := pjsua2.NewDirectorCall(sipCall, account)
-   sipCall.call = call
-   callOpParam := pjsua2.NewCallOpParam(true)
-   callOpParam.GetOpt().SetAudioCount(1)
-
-   call.MakeCall(remoteUri, callOpParam)
-   ci := call.GetInfo()
-   ss.activeCalls[ci.GetCallIdString()] = call
-   fmt.Printf("[ SipService ] Make Call, From = %v, To = %v, callId = %v\n",
-      account.GetInfo().GetUri(), remoteUri, ci.GetCallIdString())
-   return ci.GetCallIdString()
+func onRegState(uri string, active bool, code pjsua2.Pjsip_status_code) {
+    emitEvent("OnRegState", uri, active, int(code))
 }
 
-func (ss *SipService) createLocalAccount(user string, password string) pjsua2.Account {
-   sipAccount := pjsua2.NewDirectorAccount(NewAccount(user, ss))
-
-   accountConfig := pjsua2.NewAccountConfig()
-   accountConfig.SetIdUri("sip:test1@pjsip.org")
-   accountConfig.GetRegConfig().SetRegistrarUri("sip:sip.pjsip.org")
-   cred := pjsua2.NewAuthCredInfo("digest", "*", "test1", 0, "test1")
-   accountConfig.GetSipConfig().GetAuthCreds().Add(cred)
-
-   sipAccount.Create(accountConfig)
-
-   fmt.Printf("[ SipService ] Account Created, URI = %v\n", sipAccount.GetInfo().GetUri())
-
-   return sipAccount
+func onIncomingCall(callId string, from string, to string) {
+    emitEvent("OnIncomingCall", callId, from, to)
 }
 
-func (ss *SipService) getRemoteURI(remoteUser string) string {
-   // remoteURI
-   remoteUri := strings.Builder{}
+func checkThread() {
+    mutex.Lock()
+    defer mutex.Unlock()
 
-   remoteUri.WriteString("sip:")
-   remoteUri.WriteString(remoteUser)
-   remoteUri.WriteString("@pjsip.org:5060;transport=udp")
-
-   return remoteUri.String()
+    if !endpoint.LibIsThreadRegistered() {
+        endpoint.LibRegisterThread(config.AgentName)
+    }
 }
 
-func (ss *SipService) getAccount(user string) pjsua2.Account {
-   return ss.activeAccounts[user]
+// public functions
+
+func RegisterEventHandler(sipUser IUserService) {
+    handlers[sipUser] = true
 }
 
-func (ss *SipService) addCall(callIdString string, call pjsua2.Call) {
-   ss.activeCalls[callIdString] = call
+func RegisterAccount(uid string, password string) {
+    checkThread()
+
+    fmt.Printf("RegisterAccount, uid=%v\n", uid)
+
+    account = createLocalAccount(uid, password)
 }
 
-func (ss *SipService) removeCall(callIdString string) {
-   call := ss.activeCalls[callIdString]
-   if call != nil {
-      fmt.Printf("[ SipService ] Remove Call, callId = %v\n", callIdString)
-      delete(ss.activeCalls, callIdString)
-      fmt.Printf("[ SipService ] Active Calls = %v\n", len(ss.activeCalls))
-   }
-}
+func MakeCall(fromUid string, toUid string) string {
+    checkThread()
 
-func (ss *SipService) onRegState(uri string, isActive bool, code pjsua2.Pjsip_status_code) {
-   ss.sipUser.OnRegState(uri, isActive, code)
-}
+    remoteUri := getRemoteURI(toUid)
 
-func (ss *SipService) onIncomingCall(callIdString string, from string, to string) interface{} {
-   return ss.sipUser.OnIncomingCall(callIdString, from, to)
-}
+    // make outgoing call
+    call := NewCall()
+    call.Call = pjsua2.NewDirectorCall(call, account)
 
-func (ss *SipService) checkThread() {
-   mutex.Lock()
-   defer mutex.Unlock()
+    callOpParam := pjsua2.NewCallOpParam(true)
+    callOpParam.GetOpt().SetAudioCount(1)
 
-   if !ss.endpoint.LibIsThreadRegistered() {
-      ss.endpoint.LibRegisterThread("")
-   }
+    fmt.Printf("MakeCall, From=%s, To=%s\n", account.GetInfo().GetUri(), remoteUri)
+
+    call.MakeCall(remoteUri, callOpParam)
+
+    ci := call.GetInfo()
+    callId := ci.GetCallIdString()
+
+    return callId
 }

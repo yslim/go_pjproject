@@ -1,40 +1,50 @@
 package main
 
 import (
-   "fmt"
-   "os"
-   "os/signal"
+    "fmt"
+    "os"
+    "os/signal"
 
-   pjsua2 "github.com/yslim/go_pjproject"
-   "github.com/yslim/go_pjproject/example/sip"
+    "github.com/yslim/go_pjproject/example/sip"
 )
 
 func main() {
 
-   sipUser := SipUser{}
-   sipService := sip.NewSipService(&sipUser)
-   sipUser.sipService = sipService
+    sipUser := SipUser{}
 
-   sipService.RegisterAccount("test1", "test1")
+    sip.RegisterEventHandler(&sipUser)
 
-   c := make(chan os.Signal, 1)
-   signal.Notify(c, os.Interrupt)
+    c := make(chan os.Signal, 1)
+    signal.Notify(c, os.Interrupt)
 
-   <- c
+    <-c
 }
 
 type SipUser struct {
-   sipService *sip.SipService
-   callId     string
+    callId string
+    state  string
 }
 
-func (su *SipUser) OnRegState(userId string, isActive bool, code pjsua2.Pjsip_status_code) {
-   fmt.Printf("[ OnRegState ] userId=%v, isActive=%v, code=%v\n", userId, isActive, code)
-   if isActive {
-      su.callId = su.sipService.MakeCall("test1", "test1")
-   }
+func (su *SipUser) OnSipReady() {
+    fmt.Printf("OnSipReady\n")
+
+    su.state = "OnSipReady"
+
+    sip.RegisterAccount("test1", "test1")
 }
-func (su *SipUser) OnIncomingCall(callIdString string, from string, to string) interface{} {
-   su.callId = callIdString
-   return "user"
+
+func (su *SipUser) OnRegState(uid string, isActive bool, code int) {
+    fmt.Printf("OnRegState, userId = %s, isActive = %v, code = %v\n", uid, isActive, code)
+
+    if isActive {
+        su.state = "OnRegState"
+        sip.MakeCall("test1", "test2")
+    } else {
+        su.state = "OnSipReady"
+    }
+}
+
+func (su *SipUser) OnIncomingCall(callId string, from string, to string) {
+    su.callId = callId
+    // sip.Answer(su.callId, sip.OK)
 }
