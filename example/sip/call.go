@@ -4,7 +4,7 @@ import (
     "fmt"
     "sync"
 
-    pjsua2 "github.com/yslim/go_pjproject"
+    pjsua2 "github.com/yslim/go_pjproject/v2"
 )
 
 type Call struct {
