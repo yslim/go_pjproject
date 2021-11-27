@@ -8,7 +8,7 @@
  * interface file instead.
  * ----------------------------------------------------------------------------- */
 
-// source: pjsua2.i
+// source: pjsua2.i v2.10
 
 package pjsua2
 

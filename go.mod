@@ -1,3 +1,3 @@
-module github.com/yslim/go_pjproject/v2
+module github.com/yslim/go_pjproject
 
 go 1.17
