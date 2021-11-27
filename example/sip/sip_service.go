@@ -6,7 +6,7 @@ import (
     "sync"
     "time"
 
-    pjsua2 "github.com/yslim/go_pjproject/v2"
+    pjsua2 "github.com/yslim/go_pjproject"
 )
 
 var (
