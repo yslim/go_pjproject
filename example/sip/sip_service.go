@@ -16,7 +16,7 @@ var (
     handlers = make(map[IUserService]bool)
     mutex    sync.Mutex
 
-    account *Account
+    account1 *Account
 )
 
 func init() {
@@ -163,7 +163,7 @@ func RegisterAccount(uid string, password string) {
 
     fmt.Printf("RegisterAccount, uid=%v\n", uid)
 
-    account = createLocalAccount(uid, password)
+    account1 = createLocalAccount(uid, password)
 }
 
 func MakeCall(fromUid string, toUid string) string {
@@ -173,12 +173,12 @@ func MakeCall(fromUid string, toUid string) string {
 
     // make outgoing call
     call := NewCall()
-    call.Call = pjsua2.NewDirectorCall(call, account)
+    call.Call = pjsua2.NewDirectorCall(call, account1)
 
     callOpParam := pjsua2.NewCallOpParam(true)
     callOpParam.GetOpt().SetAudioCount(1)
 
-    fmt.Printf("MakeCall, From=%s, To=%s\n", account.GetInfo().GetUri(), remoteUri)
+    fmt.Printf("MakeCall, From=%s, To=%s\n", account1.GetInfo().GetUri(), remoteUri)
 
     call.MakeCall(remoteUri, callOpParam)
 
